@@ -162,13 +162,13 @@ impl<T> TrustCell<T> {
         // Check that no write reference is out, then try to increment the read count and return
         // once successful.
         loop {
-            let val = self.flag.load(Ordering::Acquire);
+            let val = self.flag.load(Ordering::Relaxed);
 
             if val == usize::MAX {
                 return Err(InvalidBorrow);
             }
 
-            if self.flag.compare_and_swap(val, val + 1, Ordering::AcqRel) == val {
+            if self.flag.compare_and_swap(val, val + 1, Ordering::Acquire) == val {
                 return Ok(());
             }
         }
@@ -178,7 +178,7 @@ impl<T> TrustCell<T> {
     fn check_flag_write(&self) -> Result<(), InvalidBorrow> {
         // Check we have 0 references out, and then set the ref count to usize::MAX to
         // indicate a write lock.
-        match self.flag.compare_and_swap(0, usize::MAX, Ordering::AcqRel) {
+        match self.flag.compare_and_swap(0, usize::MAX, Ordering::Acquire) {
             0 => Ok(()),
             _ => Err(InvalidBorrow),
         }
